@@ -1,0 +1,12 @@
+[submodule "cuZFP"]
+	path = cuZFP
+	url = https://github.com/LLNL/zfp.git
+[submodule "cuSZ"]
+	path = cuSZ
+	url = https://github.com/BingluCS/cuSZ.git
+[submodule "cuSZp"]
+	path = cuSZp
+	url = https://github.com/szcompressor/cuSZp.git
+[submodule "HP-MDR"]
+	path = HP-MDR
+	url = https://github.com/JieyangChen7/MGARD.git
