@@ -5,7 +5,7 @@
 # Author: Jieyang Chen (chenj3@ornl.gov)
 # Date: April 2, 2021
 # Script for building MGARD-X
-
+cd HP-MDR
 CUDA_ARCH="75;80;86;89;90"
 
 if [ ! -z "$1" ]; then
@@ -94,3 +94,5 @@ cmake -S ${mgard_x_src_dir} -B ${mgard_x_build_dir} \
     -DCMAKE_INSTALL_PREFIX=${mgard_x_install_dir}
 time cmake --build ${mgard_x_build_dir} -j ${num_build_procs} 
 cmake --install ${mgard_x_build_dir} > /dev/null 2>&1
+
+cd ..
