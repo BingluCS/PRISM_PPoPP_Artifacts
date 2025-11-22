@@ -30,4 +30,6 @@ cmake -S cuSZ -B cuSZ/build \
 cmake --build cuSZ/build -- -j
 
 echo "installing HP-MDR..."
+cd HP-MDR
 bash install_mdr.sh $1
+cd ..
