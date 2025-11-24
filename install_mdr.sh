@@ -18,7 +18,7 @@ mgard_x_src_dir=.
 # Build directory
 build_dir=./build-cuda-hopper
 # Number of processors used for building
-num_build_procs=16
+num_build_procs=""
 # Installtaion directory
 install_dir=./install-cuda-hopper
 
