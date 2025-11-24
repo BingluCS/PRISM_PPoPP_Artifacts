@@ -210,8 +210,8 @@ def accumulate_residual(accumulate_file, decompressed_file, ddtype):
 def compute_residual(input_file, accumulate_file, residual_file, ddtype):
     B = np.fromfile(accumulate_file, dtype=ddtype)
     A = np.fromfile(input_file, dtype=ddtype)
-    if A.size != B.size and abs(A.size - B.size) != 192:
-        raise ValueError(f"A size != B size")
+    # if A.size != B.size and abs(A.size - B.size) != 192:
+    #     raise ValueError(f"A size != B size")
     A -= B[:A.size]
     A.tofile(residual_file)
 
