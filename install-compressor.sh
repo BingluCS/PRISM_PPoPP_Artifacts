@@ -4,6 +4,13 @@ if [ ! -z "$1" ]; then
     CUDA_ARCH="$1"
 fi
 
+echo "installing PRISM..."
+cd PRISM
+mkdir build && cd build
+cmake -D CMAKE_CUDA_ARCHITECTURES="$CUDA_ARCH" ..
+make -j
+cd ../..
+
 echo "installing cuSZp2..."
 cd cuSZp
 git checkout 671d5f438f452f30192d333f206f3caa742f6350

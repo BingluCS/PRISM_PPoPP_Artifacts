@@ -39,7 +39,7 @@ fi
 mkdir -p ${nvcomp_build_dir}
 cmake -S ${nvcomp_src_dir} -B ${nvcomp_build_dir}\
     -DCMAKE_INSTALL_PREFIX=${nvcomp_install_dir}\
-    -DCMAKE_CUDA_ARCHITECTURES="90"
+    -DCMAKE_CUDA_ARCHITECTURES="$CUDA_ARCH"
 cmake --build ${nvcomp_build_dir} -j ${num_build_procs}
 cmake --install ${nvcomp_build_dir} > /dev/null 2>&1
 

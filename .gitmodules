@@ -10,3 +10,6 @@
 [submodule "HP-MDR"]
 	path = HP-MDR
 	url = https://github.com/JieyangChen7/MGARD.git
+[submodule "PRISM"]
+	path = PRISM
+	url = https://github.com/BingluCS/PRISM.git
