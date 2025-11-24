@@ -6,8 +6,9 @@ fi
 
 echo "installing PRISM..."
 cd PRISM
-mkdir build && cd build
-cmake -D CMAKE_CUDA_ARCHITECTURES="$CUDA_ARCH" ..
+mkdir build 
+cd build
+cmake .. -D CMAKE_CUDA_ARCHITECTURES="$CUDA_ARCH"
 make -j
 cd ../..
 
