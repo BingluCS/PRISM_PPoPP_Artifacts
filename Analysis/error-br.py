@@ -40,9 +40,9 @@ for i, data in enumerate(dataset):
         if maxeb < np.max(group['error'][3:9]):
             maxeb = np.max(group['error'][3:9])
         if comp in step_compressors:
-            line = ax.step(group['error'][3:9], bits[i]/ group['ratio'][3:9], where="post", linewidth=4 ,label=comp, color=colors[comp])
+            line = ax.step(group['error'][3:9].to_numpy(), bits[i]/ group['ratio'][3:9].to_numpy(), where="post", linewidth=4 ,label=comp, color=colors[comp])
         else:
-            line =  ax.plot(group['error'][3:9], bits[i]/ group['ratio'][3:9], linewidth=5 , color=colors[comp])
+            line =  ax.plot(group['error'][3:9].to_numpy(), bits[i]/ group['ratio'][3:9].to_numpy(), linewidth=5 , color=colors[comp])
                 
         if i == 0:
             if comp in step_compressors:

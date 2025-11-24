@@ -50,7 +50,7 @@ for i, data in enumerate(datasets):
     for idx, (comp, group) in enumerate(retrieval.groupby('type')):
         br = bits[i]/ group['ratio']
         psnr = group['psnr']
-        ax.plot(br, psnr, color=colors[comp], marker=markers[i], linewidth=2, markersize=4, linestyle='--', label=comp if i == 0 else "") 
+        ax.plot(br.to_numpy(), psnr.to_numpy(), color=colors[comp], marker=markers[i], linewidth=2, markersize=4, linestyle='--', label=comp if i == 0 else "") 
     ax.set_xlabel('Bitrate', fontsize=18,labelpad=8)  
     ax.set_ylabel('PSNR (dB)', fontsize=18, labelpad=8)    
     ax.set_title(datasets_label[i], fontsize=20, pad=10)

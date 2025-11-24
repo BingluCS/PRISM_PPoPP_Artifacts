@@ -13,6 +13,8 @@ make -j
 cd ../..
 
 echo "installing cuSZHi..."
+cp maxerr.thrust.inl cuSZ-Hi/src/stat/detail/maxerr.thrust.inl # for compatibility with newer CUDA versions
+cp compare.thrust.inl cuSZ-Hi/src/stat/detail/compare.thrust.inl # for compatibility with newer CUDA versions
 cd cuSZ-Hi
 mkdir build 
 cd build
@@ -30,7 +32,7 @@ cmake -S cuSZp -B cuSZp/build \
 cmake --build cuSZp/build -- -j
 
 echo "installing cuZFP..."
-cp shared_time.h cuZFP/src/cuda_zfp/shared.h
+cp shared_time.h cuZFP/src/cuda_zfp/shared.h # for printing time info
 cmake -S cuZFP -B cuZFP/build \
     -D ZFP_WITH_CUDA=on \
     -D CUDA_SDK_ROOT_DIR=$(dirname $(which nvcc))/.. \
