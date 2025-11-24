@@ -12,6 +12,14 @@ cmake .. -D CMAKE_CUDA_ARCHITECTURES="$CUDA_ARCH"
 make -j
 cd ../..
 
+echo "installing cuSZHi..."
+cd cuSZ-Hi
+mkdir build 
+cd build
+cmake .. -D CMAKE_CUDA_ARCHITECTURES="$CUDA_ARCH"
+make -j
+cd ../..
+
 echo "installing cuSZp2..."
 cd cuSZp
 git checkout 671d5f438f452f30192d333f206f3caa742f6350
