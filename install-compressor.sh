@@ -14,6 +14,7 @@ cmake -S cuSZp -B cuSZp/build \
 cmake --build cuSZp/build -- -j
 
 echo "installing cuZFP..."
+cp shared_time.h cuZFP/src/cuda_zfp/shared.h
 cmake -S cuZFP -B cuZFP/build \
     -D ZFP_WITH_CUDA=on \
     -D CUDA_SDK_ROOT_DIR=$(dirname $(which nvcc))/.. \
