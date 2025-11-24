@@ -15,4 +15,4 @@
 	url = https://github.com/BingluCS/PRISM.git
 [submodule "cuSZ-Hi"]
 	path = cuSZ-Hi
-	url = git@github.com:shixun404/cuSZ-Hi.git
+	url = https://github.com/shixun404/cuSZ-Hi.git
