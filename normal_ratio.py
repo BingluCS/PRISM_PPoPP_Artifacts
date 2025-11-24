@@ -8,7 +8,7 @@ import re
 import csv
 
 if len(sys.argv) != 4:
-    print("Usage: python progressive_residual.py <dataset_name> <input_file> <csv_file>")
+    print("Usage: python normal_ratio.py <dataset_name> <input_file> <csv_file>")
     sys.exit(1)
 
 csv_file = sys.argv[3]
@@ -58,9 +58,7 @@ def run_prism(shape, data_type, input_file, e, nums, errors_list):
         "-z", compressed_file,
         "-x", decompressed_file,
         "-R", str(e),
-        "--report", "time,cr",
-        "-prog", "-errors", nums,
-    ] + [str(x) for x in errors_list]
+        "--report", "time,cr"]
     # subprocess.run(cmd, check=True)
     # result = 0
     result = subprocess.run(cmd, check=True, capture_output=True, text=True)
@@ -98,6 +96,42 @@ def run_cusz(shape, data_type, input_file, e, mode = 'abs'):
     cr_value = float(cr_match.group(1)) if cr_match else None
     result = subprocess.run(cmd_decom, check=True, capture_output=True, text=True)
     decomth_match = re.search(r"TOTAL\s+([0-9.eE+-]+)\s+([0-9.eE+-]+)", result.stdout)
+    if decomth_match:
+        decomp_th = float(decomth_match.group(2))
+    return decompressed_file, np.array([com_th, decomp_th, cr_value])
+
+def run_cuszhi(shape, data_type, input_file, e, mode = 'abs'):
+    shape_str = 'x'.join(map(str, shape))
+    data_type_para = 'f32'
+    if(data_type == "float"):
+        data_type_para = "f32"
+    else:
+        data_type_para = "f64"
+    compressed_file = input_file + ".cusza"
+    decompressed_file = input_file + ".cuszx"
+    cmd_com = [
+        "cuSZ-Hi/build/cuszhi",
+        "-l", shape_str,
+        "-t", data_type_para,
+        "-i", input_file,
+        "-z",
+        "-m", mode, "-e", "{:.8f}".format(e) ,
+        "--report", "cr,time"
+    ]
+    cmd_decom = [
+        "cuSZ-Hi/build/cuszhi",
+        "-i", compressed_file,
+        "-x",
+        "--report", "time"
+    ]
+    result = subprocess.run(cmd_com, check=True, capture_output=True, text=True)
+    comth_match = re.search(r"\(total\)\s+([0-9.eE+-]+)\s+([0-9.eE+-]+)", result.stdout)
+    cr_match = re.search(r"psz::comp::review::CR\s+([0-9.eE+-]+)", result.stdout)
+    if comth_match:
+        com_th = float(comth_match.group(2))
+    cr_value = float(cr_match.group(1)) if cr_match else None
+    result = subprocess.run(cmd_decom, check=True, capture_output=True, text=True)
+    decomth_match = re.search(r"\(total\)\s+([0-9.eE+-]+)\s+([0-9.eE+-]+)", result.stdout)
     if decomth_match:
         decomp_th = float(decomth_match.group(2))
     return decompressed_file, np.array([com_th, decomp_th, cr_value])
@@ -196,89 +230,33 @@ def run_hpmdr(shape, data_type, input_file, nums, errors_list):
     return decompressed_file, cmp_result, decmp_result
 
 
-def accumulate_residual(accumulate_file, decompressed_file, ddtype):
-    B = np.fromfile(decompressed_file, dtype=ddtype)
-    if not os.path.exists(accumulate_file):
-        shutil.copyfile(decompressed_file, accumulate_file)
-        return
-    A = np.fromfile(accumulate_file, dtype=ddtype)
-    if A.size != B.size and abs(A.size - B.size) != 192:
-        raise ValueError(f"A size != B size")
-    A += B
-    A.tofile(accumulate_file)
-
-def compute_residual(input_file, accumulate_file, residual_file, ddtype):
-    B = np.fromfile(accumulate_file, dtype=ddtype)
-    A = np.fromfile(input_file, dtype=ddtype)
-    # if A.size != B.size and abs(A.size - B.size) != 192:
-    #     raise ValueError(f"A size != B size")
-    A -= B[:A.size]
-    A.tofile(residual_file)
-
-def run_progressive_residual(shape, data_type, input_file, compressor):
-    ddtype = np.float64
-    bits = 8 * 4
-    if data_type == "double":
-        ddtype = np.float64
-        errors = [1E-1, 1E-2, 1E-3, 1E-4, 1E-5, 1E-6, 1E-7, 1E-8, 1E-9]
-        init_errors = "1E-9"
-        bits = 64
-    else:
-        ddtype = np.float32
-        errors = [1E-1, 5E-2, 1E-2, 5E-3, 1E-3, 5E-4, 1E-4, 5E-5, 1E-5]
-        init_errors = "1E-5"
-    value_range = 0
+def run_compressor(shape, data_type, input_file, compressor):
+    ddtype = np.float64 if data_type == "double" else np.float32
+    errors = [1E-3, 1E-4, 1E-5]
     data = np.memmap(input_file, dtype=ddtype, mode="r")
     value_range = data.max() - data.min()
-
-
-    accumulate_file = input_file + ".acc"
-    residual_file = input_file + ".res"
-    if os.path.exists(accumulate_file):
-        os.remove(accumulate_file)
-    if compressor == "cuSZ":
-        decompressed_file, numbers = run_cusz(shape, data_type, input_file,  errors[0] * value_range, 'abs')
-    elif compressor == "cuSZp":
-        decompressed_file, numbers = run_cuszp(shape, data_type, input_file,  errors[0] * value_range, 'abs')
-    elif compressor == "cuZFP":
-        decompressed_file, numbers = run_zfp(shape, data_type, input_file, bit_rate[0])
-        accumulate_residual(accumulate_file, decompressed_file, ddtype)
-        acc_value = numbers
-        psnr = compute_psnr(input_file, accumulate_file, ddtype, shape)
-        out_row = [compressor, sys.argv[1], psnr[1], acc_value[0], acc_value[1], acc_value[2], psnr[0]]
-        append_row(out_row)
-        compute_residual(input_file, accumulate_file, residual_file, ddtype)
-
-        for r in bit_rate[1:]:
-            decompressed_file, numbers = run_zfp(shape, data_type, residual_file, r)
-            accumulate_residual(accumulate_file, decompressed_file, ddtype)
-            psnr = compute_psnr(input_file, accumulate_file, ddtype, shape)
-            acc_value = 1 / (1 / acc_value + 1 / numbers)
-            out_row = [compressor, sys.argv[1], psnr[1], acc_value[0], acc_value[1], acc_value[2], psnr[0]]
-            append_row(out_row)
-
-            compute_residual(input_file, accumulate_file, residual_file, ddtype)
-        return
-    elif compressor == "PRISM":
-        decompressed_file, result = run_prism(shape, data_type, input_file, init_errors, '-9', np.array(errors))
-        bitrates = re.findall(r"Bit rate:\s*([0-9.+Ee-]+)", result.stdout)
-        psnr = re.findall(r"PSNR\s*=\s*([0-9.+Ee-]+)", result.stdout)
-        for i, e in enumerate(errors):
-            decompressed_file, result = run_prism(shape, data_type, input_file, init_errors, '-1', [e])
+    bits = 64 if data_type == "double" else 32
+    for e in errors:
+        if compressor == "cuSZ":
+            decompressed_file, numbers = run_cusz(shape, data_type, input_file,  e, 'rel')
+        if compressor == "cuSZ-Hi" and data_type == 'float':
+            decompressed_file, numbers = run_cuszhi(shape, data_type, input_file,  e, 'rel')
+        elif compressor == "cuSZp":
+            decompressed_file, numbers = run_cuszp(shape, data_type, input_file,  e, 'rel')
+        elif compressor == "PRISM":
+            decompressed_file, result = run_prism(shape, data_type, input_file, e, '-9', np.array(errors))
+            ratio = re.search(r"compression ratio:\s*([0-9.+Ee-]+)", result.stdout).group(1)
+            psnr = re.search(r"PSNR\s*=\s*([0-9.+Ee-]+)", result.stdout).group(1)
             dec_th = float(re.search(r"itotal.*?\d+\.\d+.*?(\d+\.\d+)", result.stdout).group(1))
             comp_th = float(re.search(r"(?<!i)total.*?\d+\.\d+.*?(\d+\.\d+)", result.stdout).group(1))
-            out_row = [compressor, sys.argv[1], e, comp_th, dec_th, bits / float(bitrates[i]), psnr[i]]
+            out_row = [compressor, sys.argv[1], e, comp_th, dec_th, ratio, psnr]
             append_row(out_row)
-        return
-    elif compressor == "HP-MDR":
-        total_bytes = (shape[0] * shape[1] * shape[2] * bits / 8)
-        decompressed_file, _, decmp_result = run_hpmdr(shape, data_type, input_file, '9', np.array(errors) * value_range)
-        additional_bytes = re.findall(r'Additional\s+(\d+)\s+bytes', decmp_result.stdout)
-        psnr_list = re.findall(r'PSNR:\s*([+-]?\d+(?:\.\d+)?)', decmp_result.stdout)
-        for i, e in enumerate(errors):
-            decompressed_file, comp_result, decmp_result = \
-                run_hpmdr(shape, data_type, input_file, '1', [e * value_range])
-            
+        elif compressor == "HP-MDR":
+            total_bytes = (shape[0] * shape[1] * shape[2] * bits / 8)
+            decompressed_file, comp_result, decmp_result = run_hpmdr(shape, data_type, input_file, '1', [e * value_range])
+            additional_bytes = re.search(r'Additional\s+(\d+)\s+bytes', decmp_result.stdout).group(1)
+            psnr = re.search(r'PSNR:\s*([+-]?\d+(?:\.\d+)?)', decmp_result.stdout).groups(1)
+
             match_die = re.search(r"Decompose \+ Interleave \+ Encoding:\s*([\d.]+) s", comp_result.stdout)
             die_time = float(match_die.group(1)) if match_die else None
             match_lossless = re.search(r"Lossless:\s*([\d.]+) s", comp_result.stdout)
@@ -294,42 +272,21 @@ def run_progressive_residual(shape, data_type, input_file, compressor):
             iserialization_time = float(match_iserial.group(1)) if match_iserial else None
             comp_th =  total_bytes / (serialization_time + die_time + lossless_time) / 1024 / 1024 / 1024
             dec_th = total_bytes / (iserialization_time + idie_time + ilossless_time) / 1024 / 1024 / 1024
-            # print(total_bytes / float(additional_bytes[i]),  comp_th, dec_th)
-            if i != 0:
-                additional_bytes[i] = float(additional_bytes[i - 1]) + float(additional_bytes[i])
             out_row = [compressor, sys.argv[1], e, comp_th, dec_th, 
-                       total_bytes / float(additional_bytes[i]), psnr_list[i]]
+                       total_bytes / float(additional_bytes), psnr[0]]
             append_row(out_row)
-        return 
-
-    accumulate_residual(accumulate_file, decompressed_file, ddtype)
-    acc_value = numbers
-    psnr = compute_psnr(input_file, accumulate_file, ddtype, shape)
-    out_row = [compressor, sys.argv[1], errors[0], acc_value[0], acc_value[1], acc_value[2], psnr[0]]
-    append_row(out_row)
-
-    compute_residual(input_file, accumulate_file, residual_file, ddtype)
-
-    for e in errors[1:]:
-        if compressor == "cuSZ":
-            decompressed_file, numbers = run_cusz(shape, data_type, residual_file,  e * value_range, 'abs')
-        elif compressor == "cuSZp":
-            decompressed_file, numbers = run_cuszp(shape, data_type, residual_file,  e * value_range, 'abs')
-        
-        accumulate_residual(accumulate_file, decompressed_file, ddtype)
-        psnr = compute_psnr(input_file, accumulate_file, ddtype, shape)
-        acc_value = 1 / (1 / acc_value + 1 / numbers)
-        out_row = [compressor, sys.argv[1], e, acc_value[0], acc_value[1], acc_value[2], psnr[0]]
-        append_row(out_row)
-
-        compute_residual(input_file, accumulate_file, residual_file, ddtype)
+        if compressor == "cuSZ" or compressor == "cuSZp" or (compressor == "cuSZ-Hi" and data_type == 'float'):
+            psnr = compute_psnr(input_file, decompressed_file, ddtype, shape)
+            acc_value = numbers
+            out_row = [compressor, sys.argv[1], e, acc_value[0], acc_value[1], acc_value[2], psnr[0]]
+            append_row(out_row)
 
 def test_progressive_residual(shape, data_type, input_file):
-    run_progressive_residual(shape, data_type, input_file, 'PRISM')
-    run_progressive_residual(shape, data_type, input_file, 'cuSZ')
-    run_progressive_residual(shape, data_type, input_file, 'cuSZp')
-    run_progressive_residual(shape, data_type, input_file, 'cuZFP')
-    run_progressive_residual(shape, data_type, input_file, 'HP-MDR')
+    run_compressor(shape, data_type, input_file, 'PRISM')
+    run_compressor(shape, data_type, input_file, 'cuSZ')
+    run_compressor(shape, data_type, input_file, 'cuSZp')
+    run_compressor(shape, data_type, input_file, 'HP-MDR')
+    run_compressor(shape, data_type, input_file, 'cuSZ-Hi')
 
 if __name__ == "__main__":
     input_file = sys.argv[2]
