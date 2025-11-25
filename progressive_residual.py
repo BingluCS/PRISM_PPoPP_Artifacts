@@ -20,7 +20,12 @@ if not os.path.exists(csv_file):
     with open(csv_file, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(header)
-
+else:
+    os.remove(csv_file)
+    print(f"Removed existing file: {csv_file}")
+    with open(csv_file, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
 
 def append_row(row):
     with open(csv_file, "a", newline="") as f:  # "a" = append
