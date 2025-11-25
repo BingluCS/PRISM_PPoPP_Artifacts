@@ -51,7 +51,7 @@ def run_prism(shape, data_type, input_file, e, nums, errors_list):
     compressed_file = input_file + ".prism"
     decompressed_file = input_file + ".prism.out"
     cmd = [
-        "../PRISM/build/prism",
+        "PRISM/build/prism",
         "-3", str(shape[0]), str(shape[1]), str(shape[2]),
         data_type_para,
         "-i", input_file,
